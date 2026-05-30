@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>행복한교회 청년회 ERP</title>
+    <meta
+      name="description"
+      content="행복한교회 청년회 회계 업무를 위한 예산, 회원, 청구, 자금현황 관리 ERP 웹앱입니다."
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="행복한교회 청년회 ERP" />
+    <meta
+      property="og:description"
+      content="행복한교회 청년회 회계 업무를 위한 예산, 회원, 청구, 자금현황 관리 ERP 웹앱입니다."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://happyoutherp.vercel.app/" />
+    <link rel="canonical" href="https://happyoutherp.vercel.app/" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">청</div>
+          <div>
+            <strong>행복한교회 청년회 회계</strong>
+            <span>행복한교회</span>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <select id="userSelect"></select>
+          <select id="yearSelect" aria-label="회계년도 선택"></select>
+          <button class="secondary-button" id="resetData">초기화</button>
+        </div>
+      </header>
+
+      <main id="app" class="content" tabindex="-1"></main>
+    </div>
+
+    <script src="./data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
