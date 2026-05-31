@@ -65,12 +65,12 @@
         vendor: values.vendor.trim(),
         reason: values.reason.trim(),
       };
-      const result = await client.from("public_claims").insert(payload).select("id").single();
+      const result = await client.from("public_claims").insert(payload);
       if (result.error) throw result.error;
 
       form.reset();
       form.elements.used_at.value = new Date().toISOString().slice(0, 10);
-      setMessage(`접수되었습니다. 접수번호: ${result.data.id.slice(0, 8)}`, "success");
+      setMessage("접수되었습니다. 회계 담당자가 내용을 확인합니다.", "success");
     } catch (error) {
       const setupNeeded = /anonymous|public_claims|relation|policy/i.test(error.message);
       setMessage(
