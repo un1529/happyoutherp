@@ -6,7 +6,8 @@ create schema if not exists private;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text not null,
-  role text not null check (role in ('accountant', 'executive', 'pastor', 'member')),
+  role text not null check (role in ('accountant', 'monitor')),
+  job_title text,
   created_at timestamptz not null default now()
 );
 
