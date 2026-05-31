@@ -1,0 +1,30 @@
+.hide {
+  display: none !important;
+}
+
+.connection-status {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.connection-status.connected {
+  color: var(--green);
+}
+
+.login-panel {
+  width: min(440px, 100%);
+  margin: 64px auto 0;
+}
+
+.login-form {
+  display: grid;
+  gap: 12px;
+}
+
+.login-message {
+  min-height: 20px;
+  color: var(--red);
+  font-size: 13px;
+}
