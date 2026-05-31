@@ -15,7 +15,9 @@
 
   function applyConnectionControls() {
     const connected = Boolean(backend.session);
-    connectionStatus.textContent = backendMessage || (connected ? "공용 저장 연결됨" : "로그인 필요");
+    const profileName = backend.profile?.job_title || backend.profile?.display_name || "사용자";
+    const permissionLabel = backend.canEdit() ? "수정 가능" : "모니터링 전용";
+    connectionStatus.textContent = backendMessage || (connected ? `${profileName} · ${permissionLabel}` : "로그인 필요");
     connectionStatus.classList.toggle("connected", connected);
     logoutButton.classList.toggle("hide", !connected);
     resetButton.classList.toggle("hide", !backend.canEdit());
