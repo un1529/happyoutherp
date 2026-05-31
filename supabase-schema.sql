@@ -39,6 +39,24 @@ $$;
 revoke all on function private.is_accountant() from public;
 grant execute on function private.is_accountant() to authenticated;
 
+create or replace function private.can_monitor()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = (select auth.uid())
+      and role in ('accountant', 'monitor')
+  );
+$$;
+
+revoke all on function private.can_monitor() from public;
+grant execute on function private.can_monitor() to authenticated;
+
 drop policy if exists "profiles_select_self" on public.profiles;
 create policy "profiles_select_self"
 on public.profiles for select
@@ -53,10 +71,11 @@ using ((select private.is_accountant()))
 with check ((select private.is_accountant()));
 
 drop policy if exists "erp_state_read_authenticated" on public.erp_state;
-create policy "erp_state_read_authenticated"
+drop policy if exists "erp_state_read_monitor" on public.erp_state;
+create policy "erp_state_read_monitor"
 on public.erp_state for select
 to authenticated
-using (true);
+using ((select private.can_monitor()));
 
 drop policy if exists "erp_state_insert_accountant" on public.erp_state;
 create policy "erp_state_insert_accountant"
