@@ -40,12 +40,23 @@
       if (!client || !userId) return null;
       const { data, error } = await client
         .from("profiles")
+        .select("id, display_name, role, job_title")
+        .eq("id", userId)
+        .maybeSingle();
+      if (!error) {
+        backend.profile = data;
+        return data;
+      }
+
+      // 기존 설치본이 마이그레이션되기 전에도 회계담당 로그인을 유지합니다.
+      const fallback = await client
+        .from("profiles")
         .select("id, display_name, role")
         .eq("id", userId)
         .maybeSingle();
-      if (error) throw error;
-      backend.profile = data;
-      return data;
+      if (fallback.error) throw fallback.error;
+      backend.profile = fallback.data;
+      return fallback.data;
     },
 
     async loadSharedState() {
