@@ -18,6 +18,7 @@
     <meta property="og:url" content="https://happyoutherp.vercel.app/" />
     <link rel="canonical" href="https://happyoutherp.vercel.app/" />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./supabase-styles.css" />
   </head>
   <body>
     <div class="app-shell">
@@ -31,8 +32,10 @@
         </div>
 
         <div class="topbar-actions">
+          <span class="connection-status" id="connectionStatus">데모 모드</span>
           <select id="userSelect"></select>
           <select id="yearSelect" aria-label="회계년도 선택"></select>
+          <button class="secondary-button hide" id="logoutButton">로그아웃</button>
           <button class="secondary-button" id="resetData">초기화</button>
         </div>
       </header>
@@ -40,7 +43,11 @@
       <main id="app" class="content" tabindex="-1"></main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabase-config.js"></script>
+    <script src="./supabase-client.js"></script>
     <script src="./data.js"></script>
     <script src="./app.js"></script>
+    <script src="./supabase-integration.js"></script>
   </body>
 </html>
