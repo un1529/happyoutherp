@@ -2,6 +2,10 @@
   display: none !important;
 }
 
+#resetData {
+  display: none !important;
+}
+
 .connection-status {
   color: var(--muted);
   font-size: 12px;
