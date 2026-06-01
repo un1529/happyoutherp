@@ -1,5 +1,43 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>청구 제출 | 행복한교회 청년회</title><meta name="description" content="행복한교회 청년회 회계 청구를 로그인 없이 제출하는 페이지입니다." /><meta name="robots" content="noindex, nofollow" /><link rel="stylesheet" href="./styles.css" /><link rel="stylesheet" href="./claim.css" /></head>
-<body><div class="app-shell claim-shell"><header class="topbar"><a class="brand claim-brand" href="./claim.html" aria-label="청구 제출 처음으로"><div class="brand-mark">청</div><div><strong>행복한교회 청년회</strong><span>회계 청구 제출</span></div></a><a class="secondary-button claim-login-link" href="./index.html">임원진 로그인</a></header><main class="content"><section class="panel claim-submit-panel"><div class="panel-title claim-submit-title"><div><p class="eyebrow">로그인 없이 제출</p><h1>회계 청구 제출</h1><p class="muted">제출 후 회계 담당자가 내용을 확인합니다.</p></div><span class="status waiting">접수용</span></div><div class="notice claim-notice">영수증과 계좌번호는 안전하게 보관되며, 지급 업무를 담당하는 회계담당자만 계좌번호를 확인할 수 있습니다.</div><form class="form-grid public-claim-form" data-public-claim-form><label>이름<input type="text" name="requester_name" maxlength="40" autocomplete="name" required /></label><label>소속<input type="text" name="affiliation" maxlength="60" placeholder="예: 믿음순" required /></label><label>사용일<input type="date" name="used_at" required /></label><label>금액<input type="number" name="amount" min="1" step="1" inputmode="numeric" required /></label><label class="full">사용처<input type="text" name="vendor" maxlength="100" required /></label><label class="full">사유<textarea name="reason" rows="4" maxlength="500" required></textarea></label><label class="full">영수증<input type="file" name="receipt" accept="image/jpeg,image/png,image/webp,application/pdf" required /><span class="field-help">JPG, PNG, WEBP, PDF 파일 · 최대 10MB</span></label><label class="full">계좌번호<input type="text" name="bank_account" maxlength="80" autocomplete="off" placeholder="은행명과 계좌번호를 입력해주세요" required /></label><label class="claim-honeypot" aria-hidden="true">웹사이트<input type="text" name="website" tabindex="-1" autocomplete="off" /></label><p class="full claim-consent">제출 시 청구 처리에 필요한 정보와 영수증을 회계담당자가 열람하는 것에 동의한 것으로 간주합니다.</p><div class="full claim-captcha hide" data-turnstile-container><div data-turnstile-widget></div></div><div class="full actions"><button class="primary-button" type="submit" data-submit-claim>청구 제출</button><p class="claim-form-message" data-claim-message aria-live="polite"></p></div></form></section></main></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script><script src="./supabase-config.js"></script><script src="./claim.js"></script></body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>청구 제출 | 행복한교회 청년회</title>
+    <meta name="description" content="행복한교회 청년회 회계 청구를 로그인 없이 제출하는 페이지입니다." />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./claim.css" />
+  </head>
+  <body>
+    <div class="app-shell claim-shell">
+      <header class="topbar">
+        <a class="brand claim-brand" href="./claim.html" aria-label="청구 제출 처음으로"><div class="brand-mark">청</div><div><strong>행복한교회 청년회</strong><span>회계 청구 제출</span></div></a>
+        <a class="secondary-button claim-login-link" href="./index.html">임원진 로그인</a>
+      </header>
+      <main class="content"><section class="panel claim-submit-panel">
+        <div class="panel-title claim-submit-title"><div><p class="eyebrow">로그인 없이 제출</p><h1>회계 청구 제출</h1><p class="muted">제출 후 회계 담당자가 내용을 확인합니다.</p></div><span class="status waiting">접수용</span></div>
+        <div class="notice claim-notice">선지출 영수증과 계좌번호는 안전하게 보관되며, 지급 업무를 담당하는 회계담당자만 계좌번호를 확인할 수 있습니다.</div>
+        <form class="form-grid public-claim-form" data-public-claim-form>
+          <label>이름<input type="text" name="requester_name" maxlength="40" autocomplete="name" required /></label>
+          <label>소속<input type="text" name="affiliation" maxlength="60" placeholder="예: 믿음순" required /></label>
+          <label>청구 유형<select name="track" required data-claim-track><option value="선지출">선지출</option><option value="선승인">선승인</option></select></label>
+          <label>사용일<input type="date" name="used_at" required /></label>
+          <label>금액<input type="number" name="amount" min="1" step="1" inputmode="numeric" required /></label>
+          <label class="full">사용처<input type="text" name="vendor" maxlength="100" required /></label>
+          <label class="full">사유<textarea name="reason" rows="4" maxlength="500" required></textarea></label>
+          <label class="full" data-expense-only>영수증<input type="file" name="receipt" accept="image/jpeg,image/png,image/webp,application/pdf" required /><span class="field-help">JPG, PNG, WEBP, PDF 파일 · 최대 10MB</span></label>
+          <label class="full" data-expense-only>계좌번호<input type="text" name="bank_account" maxlength="80" autocomplete="off" placeholder="은행명과 계좌번호를 입력해주세요" required /></label>
+          <div class="full notice hide" data-preapproval-notice>선승인은 승인 후 실제 지출이 발생하면 영수증과 계좌번호를 포함해 다시 청구해야 합니다.</div>
+          <label class="claim-honeypot" aria-hidden="true">웹사이트<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+          <p class="full claim-consent">제출 시 청구 처리에 필요한 정보를 회계담당자가 열람하는 것에 동의한 것으로 간주합니다.</p>
+          <div class="full claim-captcha hide" data-turnstile-container><div data-turnstile-widget></div></div>
+          <div class="full actions"><button class="primary-button" type="submit" data-submit-claim>청구 제출</button><p class="claim-form-message" data-claim-message aria-live="polite"></p></div>
+        </form>
+      </section></main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+    <script src="./supabase-config.js"></script><script src="./claim.js"></script>
+  </body>
 </html>
