@@ -4,5 +4,5 @@ window.erpSupabaseConfig = {
   url: "https://kwafkxzhxlrdrmvvvryo.supabase.co",
   anonKey: "sb_publishable_-sbNi2Rkkk2kIdMI8dIK2w_hxA0xtvr",
   // Cloudflare Turnstile Site key는 공개값입니다. Secret key는 Supabase에만 입력합니다.
-  turnstileSiteKey: "",
+  turnstileSiteKey: "0x4AAAAAADb7NsCY6egF-Ibv",
 };
