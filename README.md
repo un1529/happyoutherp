@@ -11,7 +11,10 @@
 
 1. Supabase Dashboard > SQL Editor에서 `public-claim-schema.sql` 전체를 한 번 실행합니다.
 2. Supabase Dashboard > Authentication > Providers에서 Anonymous Sign-Ins를 활성화합니다.
-3. 널리 공유하기 전에는 Authentication > Bot and Abuse Protection에서 CAPTCHA 또는 Cloudflare Turnstile을 설정합니다.
+3. Cloudflare Turnstile에서 `happyoutherp.vercel.app`용 위젯을 만들고 공개 `Site key`를 `supabase-config.js`의 `turnstileSiteKey`에 넣습니다.
+4. Supabase Dashboard > Authentication > Bot and Abuse Protection에서 Cloudflare Turnstile을 선택하고 비밀 `Secret key`를 직접 입력합니다.
+
+Turnstile의 `Secret key`는 HTML, JavaScript, GitHub, 채팅에 넣으면 안 됩니다.
 
 공개 화면에서는 계좌번호와 영수증을 받지 않습니다.
 
