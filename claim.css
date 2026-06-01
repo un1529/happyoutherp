@@ -64,6 +64,10 @@
   overflow: hidden;
 }
 
+.claim-captcha {
+  min-height: 66px;
+}
+
 .claim-form-message {
   min-height: 20px;
   margin: 0;
