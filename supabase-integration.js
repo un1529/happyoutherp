@@ -1,280 +1,42 @@
 (function attachSupabaseIntegration() {
   if (typeof backendEnabled === "function") return;
-
   const backend = window.erpBackend;
   if (!backend?.configured) return;
-
   const connectionStatus = document.querySelector("#connectionStatus");
   const logoutButton = document.querySelector("#logoutButton");
   const resetButton = document.querySelector("#resetData");
   let backendMessage = "";
   let publicClaims = [];
   let publicClaimsMessage = "";
-
   const originalRender = render;
   const originalSaveData = saveData;
   const originalCanManageMoney = canManageMoney;
-
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function publicClaimStatus(status) {
-    return {
-      submitted: ["접수", "waiting"],
-      reviewing: ["검토중", "waiting"],
-      completed: ["처리완료", "done"],
-      rejected: ["반려", "rejected"],
-    }[status] || ["접수", "waiting"];
-  }
-
+  function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
+  function publicClaimStatus(status) { return { submitted: ["접수", "waiting"], reviewing: ["검토중", "waiting"], completed: ["처리완료", "done"], rejected: ["반려", "rejected"] }[status] || ["접수", "waiting"]; }
   function publicClaimCard(claim) {
     const [statusText, statusClassName] = publicClaimStatus(claim.status);
-    const actions = backend.canEdit()
-      ? `<div class="actions">
-          <button class="secondary-button" data-review-public-claim="${claim.id}" data-public-claim-status="reviewing">검토중</button>
-          <button class="primary-button" data-review-public-claim="${claim.id}" data-public-claim-status="completed">처리완료</button>
-          <button class="danger-button" data-review-public-claim="${claim.id}" data-public-claim-status="rejected">반려</button>
-        </div>`
-      : "";
-    return `
-      <article class="claim-card">
-        <div class="claim-head">
-          <div>
-            <strong>${escapeHtml(claim.requester_name)} · ${money(claim.amount)}</strong>
-            <p class="muted">${escapeHtml(claim.vendor)} · ${escapeHtml(claim.reason)}</p>
-          </div>
-          <span class="status ${statusClassName}">${statusText}</span>
-        </div>
-        <dl class="detail-list">
-          <div><dt>소속</dt><dd>${escapeHtml(claim.affiliation || "미입력")}</dd></div>
-          <div><dt>연락처</dt><dd>${escapeHtml(claim.contact || "미입력")}</dd></div>
-          <div><dt>청구 유형</dt><dd>${escapeHtml(claim.track)}</dd></div>
-          <div><dt>사용일</dt><dd>${escapeHtml(claim.used_at)}</dd></div>
-          <div><dt>접수번호</dt><dd>${escapeHtml(claim.id.slice(0, 8))}</dd></div>
-          <div><dt>접수시각</dt><dd>${escapeHtml(new Date(claim.created_at).toLocaleString("ko-KR"))}</dd></div>
-        </dl>
-        ${actions}
-      </article>
-    `;
+    const receiptAction = claim.receipt_path ? `<button class="secondary-button" data-open-public-receipt="${escapeHtml(claim.receipt_path)}">영수증 열기</button>` : `<span class="muted">영수증 없음</span>`;
+    const actions = backend.canEdit() ? `<div class="actions"><button class="secondary-button" data-review-public-claim="${claim.id}" data-public-claim-status="reviewing">검토중</button><button class="primary-button" data-review-public-claim="${claim.id}" data-public-claim-status="completed">처리완료</button><button class="danger-button" data-review-public-claim="${claim.id}" data-public-claim-status="rejected">반려</button></div>` : "";
+    return `<article class="claim-card"><div class="claim-head"><div><strong>${escapeHtml(claim.requester_name)} · ${money(claim.amount)}</strong><p class="muted">${escapeHtml(claim.vendor)} · ${escapeHtml(claim.reason)}</p></div><span class="status ${statusClassName}">${statusText}</span></div><dl class="detail-list"><div><dt>소속</dt><dd>${escapeHtml(claim.affiliation || "미입력")}</dd></div><div><dt>연락처</dt><dd>${escapeHtml(claim.contact || "미입력")}</dd></div><div><dt>청구 유형</dt><dd>${escapeHtml(claim.track)}</dd></div><div><dt>사용일</dt><dd>${escapeHtml(claim.used_at)}</dd></div><div><dt>접수번호</dt><dd>${escapeHtml(claim.id.slice(0, 8))}</dd></div><div><dt>접수시각</dt><dd>${escapeHtml(new Date(claim.created_at).toLocaleString("ko-KR"))}</dd></div></dl><div class="actions">${receiptAction}</div>${actions}</article>`;
   }
-
-  function renderPublicClaimInbox() {
-    if (state.view !== "claims") return;
-    const stack = app.querySelector(".stack");
-    if (!stack) return;
-    const contents = publicClaimsMessage
-      ? `<div class="empty">${escapeHtml(publicClaimsMessage)}</div>`
-      : publicClaims.map(publicClaimCard).join("") || `<div class="empty">공개 접수된 청구가 없습니다.</div>`;
-    stack.insertAdjacentHTML(
-      "afterbegin",
-      `<section class="panel">
-        <div class="panel-title">
-          <h2>공개 접수함</h2>
-          <a class="secondary-button public-claim-link" href="./claim.html">공개 청구 링크</a>
-        </div>
-        ${contents}
-      </section>`,
-    );
-  }
-
-  async function loadPublicClaims() {
-    if (!backend.session || !backend.profile) return;
-    const result = await backend.client
-      .from("public_claims")
-      .select("id, requester_name, affiliation, contact, track, used_at, amount, vendor, reason, status, created_at")
-      .order("created_at", { ascending: false });
-    if (result.error) {
-      publicClaims = [];
-      publicClaimsMessage = "공개 청구 SQL을 실행하면 이곳에 접수 내역이 표시됩니다.";
-      return;
-    }
-    publicClaims = result.data || [];
-    publicClaimsMessage = "";
-  }
-
-  function applyConnectionControls() {
-    const connected = Boolean(backend.session);
-    const profileName = backend.profile?.job_title || backend.profile?.display_name || "사용자";
-    const permissionLabel = backend.canEdit() ? "수정 가능" : "모니터링 전용";
-    connectionStatus.textContent = backendMessage || (connected ? `${profileName} · ${permissionLabel}` : "로그인 필요");
-    connectionStatus.classList.toggle("connected", connected);
-    logoutButton.classList.toggle("hide", !connected);
-    resetButton.classList.toggle("hide", !backend.canEdit());
-    userSelect.classList.toggle("hide", true);
-
-    if (connected && !backend.canEdit()) {
-      app.querySelectorAll("form, [data-sync-toss], [data-apply-all-suggestions], [data-confirm-transaction], [data-complete-claim], [data-reject-claim]")
-        .forEach((element) => {
-          element.classList.add("hide");
-        });
-    }
-  }
-
-  render = function renderWithConnection() {
-    originalRender();
-    renderPublicClaimInbox();
-    applyConnectionControls();
-  };
-
-  saveData = function saveSharedData() {
-    originalSaveData();
-    if (!backend.session || !backend.canEdit()) return;
-    backend
-      .saveSharedState(state.data)
-      .then(() => {
-        backendMessage = "공용 저장 완료";
-        applyConnectionControls();
-      })
-      .catch((error) => {
-        backendMessage = `저장 실패: ${error.message}`;
-        applyConnectionControls();
-      });
-  };
-
-  canManageMoney = function connectedMoneyPermission() {
-    return backend.canEdit();
-  };
-
-  function renderLogin(message = "") {
-    connectionStatus.textContent = "로그인 필요";
-    logoutButton.classList.add("hide");
-    resetButton.classList.add("hide");
-    userSelect.classList.add("hide");
-    app.innerHTML = `
-      <section class="panel login-panel">
-        <div class="panel-title">
-          <div>
-            <h2>로그인</h2>
-            <p class="muted">Supabase에 등록된 이메일 계정으로 접속합니다.</p>
-          </div>
-        </div>
-        <form class="login-form" data-connected-login-form>
-          <label>이메일
-            <input type="email" name="email" autocomplete="email" required />
-          </label>
-          <label>비밀번호
-            <input type="password" name="password" autocomplete="current-password" required />
-          </label>
-          <button class="primary-button" type="submit">로그인</button>
-          <a class="secondary-button public-claim-link" href="./claim.html">로그인 없이 청구 제출</a>
-          <p class="login-message">${message}</p>
-        </form>
-      </section>
-    `;
-  }
-
-  async function hydrateSharedState() {
-    const sharedData = await backend.loadSharedState();
-    if (sharedData) {
-      state.data = sharedData;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedData));
-      return;
-    }
-
-    if (backend.canEdit()) {
-      await backend.saveSharedState(state.data);
-      backendMessage = "공용 저장소 초기화 완료";
-    } else {
-      backendMessage = "회계담당이 먼저 공용 데이터를 초기화해야 합니다.";
-    }
-  }
-
-  document.addEventListener(
-    "click",
-    (event) => {
-      const publicClaimButton = event.target.closest("[data-review-public-claim]");
-      if (publicClaimButton) {
-        event.preventDefault();
-        if (!backend.canEdit()) return;
-        backend.client
-          .from("public_claims")
-          .update({
-            status: publicClaimButton.dataset.publicClaimStatus,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", publicClaimButton.dataset.reviewPublicClaim)
-          .then(async ({ error }) => {
-            if (error) throw error;
-            await loadPublicClaims();
-            render();
-          })
-          .catch((error) => {
-            publicClaimsMessage = `접수함 수정 실패: ${error.message}`;
-            render();
-          });
-        return;
-      }
-
-      if (backend.canEdit()) return;
-      const target = event.target.closest(
-        "[data-sync-toss], [data-apply-all-suggestions], [data-confirm-transaction], [data-complete-claim], [data-reject-claim]",
-      );
-      if (!target) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    },
-    true,
-  );
-
-  document.addEventListener(
-    "submit",
-    (event) => {
-      const form = event.target.closest("[data-connected-login-form]");
-      if (form) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const values = Object.fromEntries(new FormData(form).entries());
-        backend
-          .signIn(values.email, values.password)
-          .then(async () => {
-            backendMessage = "공용 저장 연결됨";
-            await hydrateSharedState();
-            render();
-          })
-          .catch((error) => renderLogin(`로그인 실패: ${error.message}`));
-        return;
-      }
-
-      if (!backend.canEdit() && event.target.closest("[data-claim-form]")) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-      }
-    },
-    true,
-  );
-
-  logoutButton.addEventListener("click", async () => {
-    await backend.signOut();
-    backendMessage = "";
-    renderLogin();
-  });
-
-  resetButton.addEventListener("click", () => {
-    if (!backend.canEdit()) return;
-    setTimeout(() => backend.saveSharedState(state.data), 0);
-  });
-
-  async function bootConnectedApp() {
-    try {
-      const session = await backend.initialize();
-      if (!session) {
-        renderLogin();
-        return;
-      }
-      await hydrateSharedState();
-      await loadPublicClaims();
-      render();
-    } catch (error) {
-      renderLogin(`연결 실패: ${error.message}`);
-    }
-  }
-
-  void originalCanManageMoney;
-  bootConnectedApp();
+  function renderPublicClaimInbox() { if (state.view !== "claims") return; const stack = app.querySelector(".stack"); if (!stack) return; const contents = publicClaimsMessage ? `<div class="empty">${escapeHtml(publicClaimsMessage)}</div>` : publicClaims.map(publicClaimCard).join("") || `<div class="empty">공개 접수된 청구가 없습니다.</div>`; stack.insertAdjacentHTML("afterbegin", `<section class="panel"><div class="panel-title"><h2>공개 접수함</h2><a class="secondary-button public-claim-link" href="./claim.html">공개 청구 링크</a></div>${contents}</section>`); }
+  async function loadPublicClaims() { if (!backend.session || !backend.profile) return; const result = await backend.client.from("public_claims").select("id, requester_name, affiliation, contact, track, used_at, amount, vendor, reason, receipt_path, receipt_name, status, created_at").order("created_at", { ascending: false }); if (result.error) { publicClaims = []; publicClaimsMessage = "공개 청구 또는 영수증 SQL을 실행하면 이곳에 접수 내역이 표시됩니다."; return; } publicClaims = result.data || []; publicClaimsMessage = ""; }
+  function applyConnectionControls() { const connected = Boolean(backend.session); const profileName = backend.profile?.job_title || backend.profile?.display_name || "사용자"; const permissionLabel = backend.canEdit() ? "수정 가능" : "모니터링 전용"; connectionStatus.textContent = backendMessage || (connected ? `${profileName} · ${permissionLabel}` : "로그인 필요"); connectionStatus.classList.toggle("connected", connected); logoutButton.classList.toggle("hide", !connected); resetButton.classList.toggle("hide", !backend.canEdit()); userSelect.classList.toggle("hide", true); if (connected && !backend.canEdit()) app.querySelectorAll("form, [data-sync-toss], [data-apply-all-suggestions], [data-confirm-transaction], [data-complete-claim], [data-reject-claim]").forEach((element) => element.classList.add("hide")); }
+  render = function renderWithConnection() { originalRender(); renderPublicClaimInbox(); applyConnectionControls(); };
+  saveData = function saveSharedData() { originalSaveData(); if (!backend.session || !backend.canEdit()) return; backend.saveSharedState(state.data).then(() => { backendMessage = "공용 저장 완료"; applyConnectionControls(); }).catch((error) => { backendMessage = `저장 실패: ${error.message}`; applyConnectionControls(); }); };
+  canManageMoney = function connectedMoneyPermission() { return backend.canEdit(); };
+  function renderLogin(message = "") { connectionStatus.textContent = "로그인 필요"; logoutButton.classList.add("hide"); resetButton.classList.add("hide"); userSelect.classList.add("hide"); app.innerHTML = `<section class="panel login-panel"><div class="panel-title"><div><h2>로그인</h2><p class="muted">Supabase에 등록된 이메일 계정으로 접속합니다.</p></div></div><form class="login-form" data-connected-login-form><label>이메일<input type="email" name="email" autocomplete="email" required /></label><label>비밀번호<input type="password" name="password" autocomplete="current-password" required /></label><button class="primary-button" type="submit">로그인</button><a class="secondary-button public-claim-link" href="./claim.html">로그인 없이 청구 제출</a><p class="login-message">${message}</p></form></section>`; }
+  async function hydrateSharedState() { const sharedData = await backend.loadSharedState(); if (sharedData) { state.data = sharedData; localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedData)); return; } if (backend.canEdit()) { await backend.saveSharedState(state.data); backendMessage = "공용 저장소 초기화 완료"; } else backendMessage = "회계담당이 먼저 공용 데이터를 초기화해야 합니다."; }
+  document.addEventListener("click", (event) => {
+    const receiptButton = event.target.closest("[data-open-public-receipt]");
+    if (receiptButton) { event.preventDefault(); backend.client.storage.from("claim-receipts").createSignedUrl(receiptButton.dataset.openPublicReceipt, 300).then(({ data, error }) => { if (error) throw error; window.open(data.signedUrl, "_blank", "noopener,noreferrer"); }).catch((error) => { publicClaimsMessage = `영수증 열기 실패: ${error.message}`; render(); }); return; }
+    const publicClaimButton = event.target.closest("[data-review-public-claim]");
+    if (publicClaimButton) { event.preventDefault(); if (!backend.canEdit()) return; backend.client.from("public_claims").update({ status: publicClaimButton.dataset.publicClaimStatus, updated_at: new Date().toISOString() }).eq("id", publicClaimButton.dataset.reviewPublicClaim).then(async ({ error }) => { if (error) throw error; await loadPublicClaims(); render(); }).catch((error) => { publicClaimsMessage = `접수함 수정 실패: ${error.message}`; render(); }); return; }
+    if (backend.canEdit()) return; const target = event.target.closest("[data-sync-toss], [data-apply-all-suggestions], [data-confirm-transaction], [data-complete-claim], [data-reject-claim]"); if (!target) return; event.preventDefault(); event.stopImmediatePropagation();
+  }, true);
+  document.addEventListener("submit", (event) => { const form = event.target.closest("[data-connected-login-form]"); if (form) { event.preventDefault(); event.stopImmediatePropagation(); const values = Object.fromEntries(new FormData(form).entries()); backend.signIn(values.email, values.password).then(async () => { backendMessage = "공용 저장 연결됨"; await hydrateSharedState(); await loadPublicClaims(); render(); }).catch((error) => renderLogin(`로그인 실패: ${error.message}`)); return; } if (!backend.canEdit() && event.target.closest("[data-claim-form]")) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
+  logoutButton.addEventListener("click", async () => { await backend.signOut(); backendMessage = ""; renderLogin(); });
+  resetButton.addEventListener("click", () => { if (!backend.canEdit()) return; setTimeout(() => backend.saveSharedState(state.data), 0); });
+  async function bootConnectedApp() { try { const session = await backend.initialize(); if (!session) { renderLogin(); return; } await hydrateSharedState(); await loadPublicClaims(); render(); } catch (error) { renderLogin(`연결 실패: ${error.message}`); } }
+  void originalCanManageMoney; bootConnectedApp();
 })();
