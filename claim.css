@@ -7,8 +7,7 @@
 .claim-notice { margin-bottom: 16px; color: var(--text); font-size: 14px; line-height: 1.6; }
 .public-claim-form label { color: var(--text); font-size: 14px; font-weight: 700; }
 .field-help { color: var(--muted); font-size: 12px; font-weight: 500; }
-.claim-consent label { display: flex; align-items: flex-start; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 500; line-height: 1.5; }
-.claim-consent input { width: 18px; min-height: 18px; margin-top: 1px; }
+.claim-consent { margin: 0; color: var(--muted); font-size: 13px; font-weight: 500; line-height: 1.5; }
 .claim-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .claim-captcha { min-height: 66px; }
 .claim-form-message { min-height: 20px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
