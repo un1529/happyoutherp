@@ -1,60 +1,22 @@
--- 행복한교회 청년회 ERP: 공개 청구 영수증 업로드 추가
--- Supabase Dashboard > SQL Editor에서 한 번 실행합니다.
-
-alter table public.public_claims
-  add column if not exists receipt_path text,
-  add column if not exists receipt_name text;
-
--- 익명 계정을 정리해도 접수 내역은 유지합니다.
-alter table public.public_claims
-  alter column submitted_by drop not null;
-
-alter table public.public_claims
-  drop constraint if exists public_claims_submitted_by_fkey;
-
-alter table public.public_claims
-  add constraint public_claims_submitted_by_fkey
-  foreign key (submitted_by) references auth.users(id) on delete set null;
-
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'claim-receipts',
-  'claim-receipts',
-  false,
-  10485760,
-  array['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-)
-on conflict (id) do update
-set
-  public = excluded.public,
-  file_size_limit = excluded.file_size_limit,
-  allowed_mime_types = excluded.allowed_mime_types;
-
+-- 공개 청구 영수증 및 지급 계좌번호 보안 저장 추가
+alter table public.public_claims add column if not exists receipt_path text, add column if not exists receipt_name text;
+alter table public.public_claims alter column submitted_by drop not null;
+alter table public.public_claims drop constraint if exists public_claims_submitted_by_fkey;
+alter table public.public_claims add constraint public_claims_submitted_by_fkey foreign key (submitted_by) references auth.users(id) on delete set null;
+insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types) values ('claim-receipts','claim-receipts',false,10485760,array['image/jpeg','image/png','image/webp','application/pdf']) on conflict (id) do update set public=excluded.public,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
 drop policy if exists "claim_receipts_submit_own_folder" on storage.objects;
-create policy "claim_receipts_submit_own_folder"
-on storage.objects for insert
-to authenticated
-with check (
-  bucket_id = 'claim-receipts'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
-  and coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false)
-);
-
+create policy "claim_receipts_submit_own_folder" on storage.objects for insert to authenticated with check (bucket_id='claim-receipts' and (storage.foldername(name))[1]=(select auth.uid())::text and coalesce((select (auth.jwt()->>'is_anonymous')::boolean),false));
 drop policy if exists "claim_receipts_cleanup_own_folder" on storage.objects;
-create policy "claim_receipts_cleanup_own_folder"
-on storage.objects for delete
-to authenticated
-using (
-  bucket_id = 'claim-receipts'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
-  and coalesce((select (auth.jwt()->>'is_anonymous')::boolean), false)
-);
-
+create policy "claim_receipts_cleanup_own_folder" on storage.objects for delete to authenticated using (bucket_id='claim-receipts' and (storage.foldername(name))[1]=(select auth.uid())::text and coalesce((select (auth.jwt()->>'is_anonymous')::boolean),false));
 drop policy if exists "claim_receipts_read_monitor" on storage.objects;
-create policy "claim_receipts_read_monitor"
-on storage.objects for select
-to authenticated
-using (
-  bucket_id = 'claim-receipts'
-  and (select private.can_monitor())
-);
+create policy "claim_receipts_read_monitor" on storage.objects for select to authenticated using (bucket_id='claim-receipts' and (select private.can_monitor()));
+create table if not exists public.public_claim_payment_details (claim_id uuid primary key references public.public_claims(id) on delete cascade,submitted_by uuid not null,bank_account text not null check(char_length(bank_account) between 5 and 80),created_at timestamptz not null default now());
+alter table public.public_claim_payment_details enable row level security;
+revoke all on table public.public_claim_payment_details from anon; revoke all on table public.public_claim_payment_details from authenticated; grant select on table public.public_claim_payment_details to authenticated; revoke insert on table public.public_claims from authenticated;
+drop policy if exists "public_claim_payment_details_submit" on public.public_claim_payment_details;
+create policy "public_claim_payment_details_submit" on public.public_claim_payment_details for insert to authenticated with check ((select auth.uid())=submitted_by and coalesce((select (auth.jwt()->>'is_anonymous')::boolean),false));
+drop policy if exists "public_claim_payment_details_read_accountant" on public.public_claim_payment_details;
+create policy "public_claim_payment_details_read_accountant" on public.public_claim_payment_details for select to authenticated using ((select private.is_accountant()));
+create or replace function public.submit_public_claim(p_claim_id uuid,p_requester_name text,p_affiliation text,p_used_at date,p_amount bigint,p_vendor text,p_reason text,p_receipt_path text,p_receipt_name text,p_bank_account text) returns void language plpgsql security definer set search_path=public as $$ begin if auth.uid() is null or not coalesce((auth.jwt()->>'is_anonymous')::boolean,false) then raise exception 'anonymous session required'; end if; if trim(p_requester_name)='' or trim(p_affiliation)='' or trim(p_vendor)='' or trim(p_reason)='' or trim(p_bank_account)='' or p_amount<=0 then raise exception 'required claim field missing'; end if; if p_receipt_path not like auth.uid()::text||'/%' then raise exception 'invalid receipt path'; end if; insert into public.public_claims(id,submitted_by,requester_name,affiliation,track,used_at,amount,vendor,reason,receipt_path,receipt_name) values(p_claim_id,auth.uid(),p_requester_name,p_affiliation,'선지출',p_used_at,p_amount,p_vendor,p_reason,p_receipt_path,p_receipt_name); insert into public.public_claim_payment_details(claim_id,submitted_by,bank_account) values(p_claim_id,auth.uid(),p_bank_account); end; $$;
+revoke all on function public.submit_public_claim(uuid,text,text,date,bigint,text,text,text,text,text) from public;
+grant execute on function public.submit_public_claim(uuid,text,text,date,bigint,text,text,text,text,text) to authenticated;
